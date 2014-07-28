@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/flynn/flynn-controller/client"
-	"github.com/flynn/go-flynn/demultiplex"
+	"github.com/flynn/go-flynn/cluster"
 )
 
 var cmdLog = &Command{
@@ -30,11 +30,14 @@ func runLog(cmd *Command, args []string, client *controller.Client) error {
 	if err != nil {
 		return err
 	}
-	var stderr io.Writer
+	var stderr io.Writer = os.Stdout
 	if logSplitOut {
 		stderr = os.Stderr
 	}
-	demultiplex.Copy(os.Stdout, stderr, rc)
-	rc.Close()
+	attachClient := cluster.NewAttachClient(struct {
+		io.Writer
+		io.ReadCloser
+	}{nil, rc})
+	attachClient.Receive(os.Stdout, stderr)
 	return nil
 }
